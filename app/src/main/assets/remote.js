@@ -22,6 +22,9 @@
   if (window.cineJoyTvRemote || !document.body) return;
 
   var timeline = '.player-root [class~="group/progress"]:has(> input[type=range][aria-label="Seek Video"])';
+  var episodePanel = '.episode-popover';
+  var episodeCard = '[role=button][aria-label^="Play "]';
+  var seasonButton = 'button[aria-label="Change season"]';
   var focusable = [
     'a[href]', 'button', 'input:not([type=hidden])', 'select', 'textarea',
     'summary', '[contenteditable=true]', '[role=button]', '[role=tab]',
@@ -154,21 +157,21 @@
   }
 
   function scope() {
-    var fullscreen = document.fullscreenElement || document.webkitFullscreenElement;
-    if (fullscreen) return fullscreen;
-    var dialogs = document.querySelectorAll('dialog[open],[role=dialog][aria-modal=true],[aria-modal=true]');
+    var root = document.fullscreenElement || document.webkitFullscreenElement || document;
+    var dialogs = root.querySelectorAll('dialog[open],[role=dialog][aria-modal=true],[aria-modal=true]');
     for (var i = dialogs.length - 1; i >= 0; i--) {
       if (shown(dialogs[i])) return dialogs[i];
     }
-    if (!watching()) {
+    if (root === document && !watching()) {
       var preview = document.querySelector(previewSelector);
       if (shown(preview)) return preview;
     }
-    return (watching() && playerPanel()) || document;
+    return (watching() && playerPanel(root)) || root;
   }
 
-  function playerPanel() {
-    var panels = document.querySelectorAll('.player-root .server-panel,.player-root .menu-slide-panel');
+  function playerPanel(root) {
+    var panels = (root || document).querySelectorAll(
+      '.player-root .server-panel,.player-root .menu-slide-panel,.player-root ' + episodePanel);
     for (var i = panels.length - 1; i >= 0; i--) {
       if (shown(panels[i]) && hitPoint(panels[i])) return panels[i];
     }
@@ -365,6 +368,25 @@
     window.cineJoyTvMedia.seekBy(video, direction === 'left' ? -seconds : seconds);
   }
 
+  function moveEpisodeFocus(panel, from, direction) {
+    if (!panel.matches(episodePanel)) return false;
+    var season = panel.querySelector(seasonButton);
+    var onCard = from.matches(episodeCard);
+    if (onCard && direction === 'up' && shown(season)) {
+      focus(season);
+      return true;
+    }
+    if (!(from === season && direction === 'down') &&
+        !(onCard && (direction === 'left' || direction === 'right'))) return false;
+    var cards = Array.from(panel.querySelectorAll(episodeCard)).filter(function (card) {
+      return usableControl(card);
+    });
+    var next = from === season ? cards.find(hitPoint) || cards[0] :
+      cards[cards.indexOf(from) + (direction === 'left' ? -1 : 1)];
+    if (next) focus(next);
+    return true;
+  }
+
   function move(direction, repeat) {
     var horizontal = direction === 'left' || direction === 'right';
     if (watching()) {
@@ -408,6 +430,7 @@
       focus(from);
       return;
     }
+    if (root !== document && moveEpisodeFocus(root, from, direction)) return;
     var start = from.getBoundingClientRect();
     if (from.matches(timeline)) {
       if (direction === 'up') {
@@ -558,13 +581,30 @@
       return true;
     }
     if (finishEditing()) return true;
+    var root = scope();
+    if (root !== document && root.matches(episodePanel)) {
+      var backToEpisodes = root.querySelector('button[aria-label="Back to episodes"]');
+      if (shown(backToEpisodes)) {
+        backToEpisodes.click();
+        setTimeout(function () {
+          var season = root.querySelector(seasonButton);
+          if (shown(season)) focus(season);
+        }, 0);
+        return true;
+      }
+      var episodes = document.querySelector('.player-root button[aria-label="Episodes"]');
+      if (shown(episodes)) {
+        episodes.click();
+        focus(episodes);
+        return true;
+      }
+    }
     var fullscreen = document.fullscreenElement || document.webkitFullscreenElement;
     if (fullscreen) {
       if (document.exitFullscreen) document.exitFullscreen();
       else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
       return true;
     }
-    var root = scope();
     if (root !== document) {
       var close = controls(root).find(function (element) {
         return /^(close|cancel|dismiss)( |$)/i.test(element.getAttribute('aria-label') || (element.textContent || "").trim());
@@ -630,17 +670,22 @@
     if (!(event.target instanceof Element)) return;
     var player = watching() && event.target.closest('.player-root');
     if (player) showPlayerControls(player);
-    var trigger = event.target.closest('button[aria-label="Servers"],button[aria-label="Subtitles"],button[aria-label="Settings"]');
-    if (!trigger || !watching() || scope() !== document) return;
+    var trigger = event.target.closest('button[aria-label="Servers"],button[aria-label="Subtitles"],button[aria-label="Settings"],button[aria-label="Episodes"]');
+    var playerScope = document.fullscreenElement || document.webkitFullscreenElement || document;
+    if (!trigger || !watching() || scope() !== playerScope) return;
     playerMenuButton = trigger;
-    setTimeout(function () {
+    var attempts = trigger.matches('button[aria-label="Episodes"]') ? 5 : 1;
+    function focusOpenedPanel() {
+      if (playerMenuButton !== trigger || !trigger.isConnected) return;
       var panel = scope();
-      if (panel === document || panel.contains(focused)) return;
-      var first = controls(panel).find(function (control) {
+      if (panel !== playerScope && panel.contains(focused)) return;
+      var first = panel !== playerScope && controls(panel).find(function (control) {
         return !/^close$/i.test(control.getAttribute('aria-label') || '') && hitPoint(control);
       });
       if (first) focus(first);
-    }, 180);
+      else if (--attempts > 0) setTimeout(focusOpenedPanel, 180);
+    }
+    setTimeout(focusOpenedPanel, 180);
   }, true);
   document.addEventListener('pointerdown', function (event) {
     if (focused && !focused.contains(event.target)) clear();

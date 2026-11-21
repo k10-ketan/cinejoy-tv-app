@@ -6,6 +6,9 @@
   .player-root { position: relative; height: 90vh; background: #111; }
   video { width: 100%; height: 100%; }
   .bottom-0, .server-panel { position: absolute; inset: auto 20px 10px; }
+  .episode-popover { position: absolute; inset: 12% 4% 22%; padding: 16px; background: #444; }
+  .episode-row { display: flex; overflow-x: auto; margin: 12px 0 0 70px; width: 320px; gap: 12px; }
+  .episode-row [role=button] { flex: 0 0 130px; height: 100px; background: #aaa; }
   .server-panel { bottom: 100px; padding: 20px; background: white; }
   .bottom-0 { display: flex; flex-wrap: wrap; }
   .group\/progress { order: -1; width: 100%; height: 36px; }
@@ -18,6 +21,7 @@
   <div class="bottom-0">
     <button id="play" aria-label="Pause">Play</button>
     <button id="servers" aria-label="Servers">Servers</button>
+    <button id="episodes" aria-label="Episodes">Episodes</button>
     <div class="group/progress"><input type="range" aria-label="Seek Video"></div>
   </div>
   <div class="top-0"><button id="cast">Cast</button><span id="title">Movie title</span></div>
@@ -49,6 +53,49 @@
     panel.firstChild.onclick = () => panel.remove();
     player.appendChild(panel);
   };
+
+  let selectedEpisode;
+  document.getElementById('episodes').onclick = () => {
+    const openPanel = player.querySelector('.episode-popover');
+    if (openPanel) {
+      openPanel.remove();
+      return;
+    }
+    const panel = document.createElement('div');
+    panel.className = 'episode-popover';
+    panel.setAttribute('role', 'dialog');
+
+    function showEpisodes() {
+      panel.innerHTML = `
+        <button aria-label="Change season">Season 1</button>
+        <div class="episode-row">
+          <div role="button" aria-label="Play episode 1" aria-disabled="true">Now playing</div>
+          <div role="button" aria-label="Play episode 2">Episode 2</div>
+          <div role="button" aria-label="Play episode 3">Episode 3</div>
+          <div role="button" aria-label="Play episode 4">Episode 4</div>
+        </div>`;
+      panel.firstElementChild.onclick = () => {
+        panel.innerHTML = '<button aria-label="Back to episodes">Back</button><button>Season 2</button>';
+        panel.firstElementChild.onclick = showEpisodes;
+      };
+      panel.querySelector('.episode-row').onclick = event => {
+        selectedEpisode = event.target.getAttribute('aria-label');
+      };
+    }
+
+    showEpisodes();
+    setTimeout(() => player.appendChild(panel), 220);
+  };
+
+  function pressSelect() {
+    const point = remote.select();
+    check(point && !point.playback, 'Select should target the focused picker control');
+    document.elementFromPoint(point.x * innerWidth, point.y * innerHeight).click();
+  }
+
+  function focusedLabel() {
+    return focused()?.getAttribute('aria-label');
+  }
 
   function check(condition, message) {
     if (!condition) throw new Error(message);
@@ -93,7 +140,30 @@
     check(remote.back(), 'Back should close the server menu');
     await wait(4250);
     check(!document.querySelector('.server-panel') && !visible(bar), 'The bar should hide after the menu closes');
-    document.getElementById('result').textContent = 'PASS player controls auto-hide';
+    const commandsBeforePicker = commands.length;
+    remote.playerOption('Episodes');
+    await wait(450);
+    check(focusedLabel() === 'Change season', 'The season selector should receive focus when the picker opens');
+    remote.move('down', 0);
+    check(focusedLabel() === 'Play episode 2', 'Down should skip the disabled current episode');
+    remote.move('right', 0);
+    remote.move('right', 0);
+    check(focusedLabel() === 'Play episode 4' && document.querySelector('.episode-row').scrollLeft > 0,
+      'Right should reveal and focus clipped episodes');
+    pressSelect();
+    check(selectedEpisode === 'Play episode 4', 'Select should activate the focused episode');
+    remote.move('up', 0);
+    check(focusedLabel() === 'Change season', 'Up should return to the season selector');
+    pressSelect();
+    check(remote.back(), 'Back should return from seasons to episodes');
+    await wait(250);
+    check(focusedLabel() === 'Change season', 'Back should restore focus to the season selector');
+    await wait(4250);
+    check(visible(bar) && commands.length === commandsBeforePicker,
+      'The open picker should prevent auto-hide and keep Left and Right from seeking');
+    check(remote.back() && !document.querySelector('.episode-popover') && focusedLabel() === 'Episodes',
+      'Back should close the episode picker and restore focus to its button');
+    document.getElementById('result').textContent = 'PASS player controls and episode picker';
   }
 
   run().catch(error => { document.getElementById('result').textContent = 'FAIL ' + error.message; });

@@ -19,7 +19,7 @@ python3 -m http.server 8000 --bind 127.0.0.1
 ```
 
 - **Preview focus** checks that Resume or Play receives focus, that it survives preview updates, and that Back restores focus to the card. [Open fixture](http://127.0.0.1:8000/tests/preview-focus.html)
-- **Playback controls** checks auto-hide, direct skipping, timeline focus during pause and resume, and closing a player menu. [Open fixture](http://127.0.0.1:8000/tests/player-autohide.html)
+- **Playback controls** checks auto-hide, direct skipping, timeline focus during pause and resume, closing a player menu, and navigating the episode picker. [Open fixture](http://127.0.0.1:8000/tests/player-autohide.html)
 
 ## Test on a TV
 
@@ -39,6 +39,8 @@ Use a TV remote from launch through playback. Run the checks with a fresh instal
 | Press Up with the timeline focused while playing or paused | The player buttons and timeline hide immediately. Holding Up keeps them hidden, and Down brings them back |
 | Leave the timeline focused while paused, then press Play and wait four seconds | The timeline remains visible while paused. During playback, the bar hides and releases focus |
 | Open Servers, Subtitles, or Settings after the controls fade out | Focus enters the panel. Back closes it, and Left or Right inside it leaves the playback position alone |
+| Open Episodes, press Down to enter the row, use Left or Right, and press Select | The row scrolls to keep the focused card visible, and playback switches to that episode |
+| Open the season selector and press Back twice | The first press returns to the episode row. The second closes the picker and focuses the Episodes button |
 | Play a title with an unavailable source or temporarily disconnect the network | The app stays responsive. Try another server or reconnect and reload |
 | Press Home during playback, then return to the app | Playback stays in the background only if the device and app session allow it. The player remains controllable on return |
 
