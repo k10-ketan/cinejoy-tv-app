@@ -1,6 +1,12 @@
 #!/bin/bash
 set -euo pipefail
-cd "$(dirname "$0")"
+project_dir="$(cd "$(dirname "$0")/.." && pwd)"
+source_dir="$project_dir/app/src/main"
+if (( $# > 1 )); then
+    echo "Usage: $0 [output-apk]" >&2
+    exit 2
+fi
+output="${1:-$project_dir/build/CineJoy-TV.apk}"
 
 sdk="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
 if [[ -z "$sdk" ]]; then
@@ -36,10 +42,11 @@ fi
 echo "27bc203135f05b984fc218d5a9c709f0949a19a488615f2349ebdcd9e6f722a2  $webkit_aar" | shasum -a 256 -c --status
 unzip -p "$webkit_aar" classes.jar > "$work/webkit.jar"
 
-"$tools_dir/aapt2" compile --dir app/res -o "$work/resources.zip"
-"$tools_dir/aapt2" link -I "$android_jar" --manifest app/AndroidManifest.xml \
-    -A app/assets -o "$work/unsigned.apk" "$work/resources.zip"
-javac --release 8 -classpath "$android_jar:$work/webkit.jar" -d "$work/classes" app/java/app/cinejoy/tv/MainActivity.java
+"$tools_dir/aapt2" compile --dir "$source_dir/res" -o "$work/resources.zip"
+"$tools_dir/aapt2" link -I "$android_jar" --manifest "$source_dir/AndroidManifest.xml" \
+    -A "$source_dir/assets" -o "$work/unsigned.apk" "$work/resources.zip"
+javac --release 8 -classpath "$android_jar:$work/webkit.jar" -d "$work/classes" \
+    "$source_dir/java/app/cinejoy/tv/MainActivity.java"
 jar cf "$work/classes.jar" -C "$work/classes" .
 "$tools_dir/d8" --min-api 22 --lib "$android_jar" --output "$work/dex" "$work/classes.jar" "$work/webkit.jar"
 (cd "$work/dex" && zip -q "$work/unsigned.apk" classes.dex)
@@ -58,4 +65,6 @@ fi
 "$tools_dir/apksigner" sign "${signing_args[@]}" \
     --v4-signing-enabled false --out "$work/CineJoy-TV.apk" "$work/aligned.apk"
 "$tools_dir/apksigner" verify "$work/CineJoy-TV.apk"
-mv "$work/CineJoy-TV.apk" CineJoy-TV.apk
+mkdir -p -- "$(dirname "$output")"
+mv -- "$work/CineJoy-TV.apk" "$output"
+echo "Built $output"

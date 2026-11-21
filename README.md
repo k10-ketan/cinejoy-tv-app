@@ -4,7 +4,7 @@ CineJoy TV is an unofficial Android TV and Fire TV app for browsing and watching
 
 ## Install
 
-Download [CineJoy-TV.apk](CineJoy-TV.apk) or get it from the repository’s Releases page. Install it on your TV and open **CineJoy TV** from your apps list.
+Download `CineJoy-TV.apk` from the release’s **Assets** section. Install it on your TV and open **CineJoy TV** from your apps list. [GitHub Releases](https://github.com/k10-ketan/cinejoy-tv-github/releases)
 
 - **Fire TV**. Connect with ADB using Amazon’s instructions, then run the command below. [Connect to Fire TV through ADB](https://developer.amazon.com/docs/fire-tv/connecting-adb-to-device) · [Install and launch an APK](https://developer.amazon.com/docs/fire-tv/installing-and-running-your-app)
 - **Android TV and Google TV**. Open the APK using an installer or file manager on the TV. If the TV prompts you, allow that specific installer to install apps from unknown sources. You can also use the ADB command below once your TV is connected and authorized. [Android Debug Bridge](https://developer.android.com/tools/adb)
@@ -13,7 +13,7 @@ Download [CineJoy-TV.apk](CineJoy-TV.apk) or get it from the repository’s Rele
 adb install -r CineJoy-TV.apk
 ```
 
-The APK targets Android-based TV devices with Android 5.1 (API 22) or newer and a compatible system WebView. See [test coverage](TESTING.md) for the hardware exercised and the checks to run on other models.
+The APK requires Android 5.1 (API 22) or newer and a compatible system WebView. [Test coverage](docs/testing.md)
 
 If you have a development build of `app.cinejoy.tv` signed with another key, Android will reject an in-place update. Installing this release then requires removing that earlier build first, which clears its local app data. Later releases signed with the same release key can update in place. [Android app signing](https://developer.android.com/studio/publish/app-signing)
 
@@ -37,20 +37,12 @@ The title at the top of the player is display text. Playback and available contr
 
 When a title opens a preview card, the remote highlights **Resume** or **Play**. Press Select again to start playback, or use the D-pad to reach the other actions.
 
-## Build from source
-
-On macOS or Linux, install JDK 17 and the Android SDK command-line tools. Install SDK Platform 34 and Build Tools 34.0.0. The script also uses Bash, curl, zip, unzip, and shasum.
-
-```sh
-sdkmanager "platforms;android-34" "build-tools;34.0.0"
-export ANDROID_SDK_ROOT="/path/to/android-sdk"
-./build-apk.sh
-```
-
-The script downloads and checks the SHA-256 of AndroidX WebKit 1.9.0. To use a previously downloaded copy, set `CINEJOY_WEBKIT_AAR` to the path to that AAR. By default, the script uses the Android development keystore at `~/.android/debug.keystore`, which Android Studio creates during a debug build. Build in a separate checkout if you want to keep the supplied release file, since the script writes to `CineJoy-TV.apk` in the project root. [Third-party license notice](app/assets/licenses/NOTICE.txt)
-
-See [PUBLISHING.md](PUBLISHING.md) for release signing and GitHub packaging. Run the checks in [TESTING.md](TESTING.md) before sharing a new release.
-
 ## How it works
 
 The app uses Android’s WebView and loads the live CineJoy website. The Java activity handles remote keys, full-screen playback, and website loading errors. The bundled scripts handle D-pad focus and communicate with the active player. The APK contains no movies or episodes. Playback, catalog content, sign-in, and cookies depend on the website and its player providers.
+
+## Development
+
+- [Build from source](docs/development.md)
+- [Run tests](docs/testing.md)
+- [Sign and publish a release](docs/releasing.md)

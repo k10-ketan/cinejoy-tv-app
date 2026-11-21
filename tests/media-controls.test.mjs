@@ -4,7 +4,7 @@ import { MessageChannel } from 'node:worker_threads';
 import { test } from 'node:test';
 import { runInNewContext } from 'node:vm';
 
-const script = readFileSync(new URL('../app/assets/media-controls.js', import.meta.url), 'utf8');
+const script = readFileSync(new URL('../app/src/main/assets/media-controls.js', import.meta.url), 'utf8');
 const bounds = { left: 0, top: 0, right: 640, bottom: 360 };
 
 function visible(element, rect = bounds) {
