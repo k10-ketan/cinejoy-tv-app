@@ -1,3 +1,4 @@
+// Remote playback controls by k10-ketan.
 (function () {
   'use strict';
   if (window.cineJoyTvMedia) return;

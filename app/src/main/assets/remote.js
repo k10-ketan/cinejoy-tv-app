@@ -1,3 +1,4 @@
+// TV remote navigation by k10-ketan.
 (function () {
   'use strict';
   // Amazon WebView on Fire TV can omit the Media Session interfaces CineJoy uses.
