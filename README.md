@@ -41,8 +41,28 @@ When a title opens a preview card, the remote highlights **Resume** or **Play**.
 
 The app uses Android’s WebView and loads the live CineJoy website. The Java activity handles remote keys, full-screen playback, and website loading errors. The bundled scripts handle D-pad focus and communicate with the active player. The APK contains no movies or episodes. Playback, catalog content, sign-in, and cookies depend on the website and its player providers.
 
-## Development
+## Contributing
 
-- [Build from source](docs/development.md)
-- [Run tests](docs/testing.md)
-- [Sign and publish a release](docs/releasing.md)
+Fixes for remote navigation, playback controls, and device compatibility are welcome. Browser fixtures cover focus and playback controls, so you can start without a TV.
+
+1. Fork the repository, clone your fork, and create a branch from `main`.
+2. Follow the build guide to set up JDK 17, Android SDK 34, and a local debug keystore. Run `./scripts/build-apk.sh` to produce `build/CineJoy-TV.apk`. [Build guide](docs/development.md)
+3. Run `node --test tests/*.test.mjs` with Node.js 20 or newer. For navigation or playback changes, run the relevant browser fixture and try the changed flow with a TV remote if you have one. [Test guide](docs/testing.md)
+4. Push your branch and open a pull request against `main`. Describe what changed, how to reproduce the original behavior, and which checks passed. Include the TV model and OS version if you tested on hardware. [GitHub pull request guide](https://docs.github.com/en/pull-requests/how-tos/create-pull-requests/creating-a-pull-request-from-a-fork)
+
+### Where to make changes
+
+| File | What it handles |
+| --- | --- |
+| [MainActivity.java](app/src/main/java/app/cinejoy/tv/MainActivity.java) | WebView setup, native remote events, and fullscreen playback |
+| [remote.js](app/src/main/assets/remote.js) | D-pad focus, page layout, and player controls |
+| [media-controls.js](app/src/main/assets/media-controls.js) | Play, pause, and seeking in the page or an embedded player |
+| [tests/](tests/) | Media unit tests and browser fixtures |
+
+When reporting a bug, include the app version, TV model and OS version, the screen or player you were on, the exact remote buttons you pressed, and what you expected to happen. [Report an issue](https://github.com/k10-ketan/cinejoy-tv-github/issues)
+
+Maintainers can find signing and publishing instructions in the [release guide](docs/releasing.md).
+
+## License
+
+This repository has no project-wide license. The bundled AndroidX WebKit library is licensed under Apache 2.0. [Third-party notice](app/src/main/assets/licenses/NOTICE.txt)
