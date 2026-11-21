@@ -34,6 +34,19 @@ work="$(mktemp -d "${TMPDIR:-/tmp}/cinejoy-apk.XXXXXX")"
 trap 'rm -rf "$work"' EXIT
 mkdir -p "$work/classes" "$work/dex"
 
+case "${CINEJOY_ENABLE_CONTROLS_UPDATES:-0}" in
+    0) controls_updates=false ;;
+    1) controls_updates=true ;;
+    *) echo "Set CINEJOY_ENABLE_CONTROLS_UPDATES to 0 or 1." >&2; exit 2 ;;
+esac
+cat > "$work/BuildConfig.java" <<EOF
+package app.cinejoy.tv;
+
+final class BuildConfig {
+    static final boolean CONTROLS_UPDATES = $controls_updates;
+}
+EOF
+
 webkit_version=1.9.0
 webkit_aar="${CINEJOY_WEBKIT_AAR:-$work/webkit.aar}"
 if [[ ! -f "$webkit_aar" ]]; then
@@ -46,7 +59,7 @@ unzip -p "$webkit_aar" classes.jar > "$work/webkit.jar"
 "$tools_dir/aapt2" link -I "$android_jar" --manifest "$source_dir/AndroidManifest.xml" \
     -A "$source_dir/assets" -o "$work/unsigned.apk" "$work/resources.zip"
 javac --release 8 -classpath "$android_jar:$work/webkit.jar" -d "$work/classes" \
-    "$source_dir/java/app/cinejoy/tv/MainActivity.java"
+    "$source_dir/java/app/cinejoy/tv/"*.java "$work/BuildConfig.java"
 jar cf "$work/classes.jar" -C "$work/classes" .
 "$tools_dir/d8" --min-api 22 --lib "$android_jar" --output "$work/dex" "$work/classes.jar" "$work/webkit.jar"
 (cd "$work/dex" && zip -q "$work/unsigned.apk" classes.dex)

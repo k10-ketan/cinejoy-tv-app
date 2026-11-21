@@ -20,6 +20,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.os.SystemClock;
+import android.util.Log;
 import android.view.Gravity;
 import android.view.InputDevice;
 import android.view.KeyEvent;
@@ -52,6 +53,7 @@ import java.util.HashSet;
 import java.util.Arrays;
 import java.util.Set;
 
+import androidx.webkit.ScriptHandler;
 import androidx.webkit.WebViewCompat;
 import androidx.webkit.WebViewFeature;
 
@@ -60,6 +62,9 @@ import org.json.JSONObject;
 
 public final class MainActivity extends Activity {
     private static final String HOME = "https://cinejoy.pk/";
+    private static final Set<String> CINEJOY_ORIGINS = new HashSet<>(Arrays.asList(
+        "https://www.cinejoy.pk", "https://cinejoy.pk"));
+    private static final long UPDATE_STARTUP_WAIT_MS = 900;
     private static final int BACKGROUND = 0xff101510;
     private static final int ACCENT = 0xff95ff50;
 
@@ -71,6 +76,13 @@ public final class MainActivity extends Activity {
     private WebChromeClient.CustomViewCallback fullscreenCallback;
     private String remoteScript;
     private String mediaScript;
+    private ControlsBundle cachedControls;
+    private ScriptHandler topFrameRegistration;
+    private int controlsVersion;
+    private int foregroundCheck;
+    private int userInput;
+    private boolean webStarted;
+    private boolean destroyed;
     private boolean frameControls;
     private boolean mediaFeedback;
     private int mediaRequest;
@@ -109,7 +121,23 @@ public final class MainActivity extends Activity {
             keyboardVisible = visible;
         });
         applyImmersiveMode();
-        if (state == null || web.restoreState(state) == null) web.loadUrl(HOME);
+        if (!BuildConfig.CONTROLS_UPDATES) {
+            startBrowsing(state, null);
+            return;
+        }
+        Runnable startupDeadline = () -> startBrowsing(state, cachedControls);
+        handler.postDelayed(startupDeadline, UPDATE_STARTUP_WAIT_MS);
+        ControlsUpdate.check(getApplicationContext(), handler, new ControlsUpdate.Listener() {
+            @Override public void onCached(ControlsBundle bundle) {
+                if (!destroyed && !webStarted) cachedControls = bundle;
+            }
+
+            @Override public void onChecked(ControlsBundle bundle) {
+                if (destroyed || webStarted) return;
+                handler.removeCallbacks(startupDeadline);
+                startBrowsing(state, bundle);
+            }
+        });
     }
 
     private boolean isKeyboardVisible() {
@@ -147,24 +175,47 @@ public final class MainActivity extends Activity {
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
         settings.setSupportMultipleWindows(true);
         CookieManager.getInstance().setAcceptThirdPartyCookies(web, true);
-        Set<String> cineJoyOrigins = new HashSet<>(Arrays.asList(
-            "https://www.cinejoy.pk", "https://cinejoy.pk"));
         mediaFeedback = WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER);
         if (mediaFeedback) {
-            WebViewCompat.addWebMessageListener(web, "CineJoyTvMediaResult", cineJoyOrigins,
+            WebViewCompat.addWebMessageListener(web, "CineJoyTvMediaResult", CINEJOY_ORIGINS,
                 (view, message, origin, isMainFrame, reply) -> {
                     if (isMainFrame && isCineJoy(view.getUrl())) showMediaResult(message.getData());
                 });
         }
         frameControls = WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT);
         if (frameControls) {
-            WebViewCompat.addDocumentStartJavaScript(web, mediaScript, Collections.singleton("*"));
-            WebViewCompat.addDocumentStartJavaScript(web, remoteScript, cineJoyOrigins);
+            // Third-party player frames always run the bridge shipped in the APK.
+            WebViewCompat.addDocumentStartJavaScript(web,
+                "if (window !== window.top) {\n" + mediaScript + "\n}", Collections.singleton("*"));
         }
         web.setWebViewClient(new Browser());
         web.setWebChromeClient(new Chrome());
         web.setFocusableInTouchMode(true);
         web.requestFocus();
+    }
+
+    private void startBrowsing(Bundle state, ControlsBundle controls) {
+        webStarted = true;
+        cachedControls = null;
+        setTopFrameControls(controls);
+        if (state == null || web.restoreState(state) == null) web.loadUrl(HOME);
+    }
+
+    private void setTopFrameControls(ControlsBundle controls) {
+        if (controls != null) {
+            controlsVersion = controls.version;
+            remoteScript = controls.remoteScript;
+            mediaScript = controls.mediaScript;
+            Log.i("CineJoyControls", "Using controls bundle " + controlsVersion);
+        }
+        if (frameControls) {
+            if (topFrameRegistration != null) topFrameRegistration.remove();
+            topFrameRegistration = WebViewCompat.addDocumentStartJavaScript(web, topFrameScripts(), CINEJOY_ORIGINS);
+        }
+    }
+
+    private String topFrameScripts() {
+        return "if (window === window.top) {\n" + mediaScript + "\n" + remoteScript + "\n}";
     }
 
     private String readScript(String name) {
@@ -366,7 +417,7 @@ public final class MainActivity extends Activity {
     }
 
     private void installRemote() {
-        web.evaluateJavascript(frameControls ? remoteScript : remoteScript + mediaScript, null);
+        web.evaluateJavascript(topFrameScripts(), null);
     }
 
     private void createMediaSession() {
@@ -565,6 +616,7 @@ public final class MainActivity extends Activity {
     }
 
     @Override public boolean dispatchKeyEvent(KeyEvent event) {
+        if (event.getAction() == KeyEvent.ACTION_DOWN) userInput++;
         if (web == null || error != null) return super.dispatchKeyEvent(event);
         int key = event.getKeyCode();
         boolean down = event.getAction() == KeyEvent.ACTION_DOWN;
@@ -789,6 +841,45 @@ public final class MainActivity extends Activity {
         web.saveState(state);
     }
 
+    @Override public boolean dispatchTouchEvent(MotionEvent event) {
+        if (event.getActionMasked() == MotionEvent.ACTION_DOWN) userInput++;
+        return super.dispatchTouchEvent(event);
+    }
+
+    @Override protected void onStart() {
+        super.onStart();
+        if (!BuildConfig.CONTROLS_UPDATES || !webStarted) return;
+        int check = ++foregroundCheck;
+        int input = userInput;
+        int page = pageVersion;
+        long started = SystemClock.elapsedRealtime();
+        ControlsUpdate.check(getApplicationContext(), handler, new ControlsUpdate.Listener() {
+            @Override public void onCached(ControlsBundle bundle) {
+                applyIfIdleOnHome(bundle);
+            }
+
+            @Override public void onChecked(ControlsBundle bundle) {
+                applyIfIdleOnHome(bundle);
+            }
+
+            private void applyIfIdleOnHome(ControlsBundle bundle) {
+                if (destroyed || check != foregroundCheck || input != userInput || page != pageVersion ||
+                        SystemClock.elapsedRealtime() - started > UPDATE_STARTUP_WAIT_MS ||
+                        bundle == null || bundle.version <= controlsVersion || error != null) return;
+                String url = web.getUrl();
+                if (isCineJoy(url) && "/".equals(Uri.parse(url).getPath())) {
+                    setTopFrameControls(bundle);
+                    web.reload();
+                }
+            }
+        });
+    }
+
+    @Override protected void onStop() {
+        foregroundCheck++;
+        super.onStop();
+    }
+
     @Override protected void onPause() {
         sendMediaAction("pause", false);
         mediaSession.setActive(false);
@@ -803,6 +894,7 @@ public final class MainActivity extends Activity {
     }
 
     @Override protected void onDestroy() {
+        destroyed = true;
         mediaSession.release();
         handler.removeCallbacksAndMessages(null);
         root.removeView(web);

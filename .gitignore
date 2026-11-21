@@ -12,3 +12,4 @@ local.properties
 *.pfx
 *.apk.idsig
 password
+cinejoy-controls.pem

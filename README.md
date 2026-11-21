@@ -45,6 +45,8 @@ The app uses Android’s WebView and loads the live CineJoy website. The Java ac
 
 Fixes for remote navigation, playback controls, and device compatibility are welcome. Browser fixtures cover focus and playback controls, so you can start without a TV.
 
+The repository includes the app source, launcher assets, build script, and tests. You can build with your own Android debug keystore. Development builds load the controls from your checkout so you can test your changes on a TV. The maintainer's private keys are used for publishing official APKs and web updates.
+
 1. Fork the repository, clone your fork, and create a branch from `main`.
 2. Follow the build guide to set up JDK 17, Android SDK 34, and a local debug keystore. Run `./scripts/build-apk.sh` to produce `build/CineJoy-TV.apk`. [Build guide](docs/development.md)
 3. Run `node --test tests/*.test.mjs` with Node.js 20 or newer. For navigation or playback changes, run the relevant browser fixture and try the changed flow with a TV remote if you have one. [Test guide](docs/testing.md)
@@ -57,7 +59,8 @@ Fixes for remote navigation, playback controls, and device compatibility are wel
 | [MainActivity.java](app/src/main/java/app/cinejoy/tv/MainActivity.java) | WebView setup, native remote events, and fullscreen playback |
 | [remote.js](app/src/main/assets/remote.js) | D-pad focus, page layout, and player controls |
 | [media-controls.js](app/src/main/assets/media-controls.js) | Play, pause, and seeking in the page or an embedded player |
-| [tests/](tests/) | Media unit tests and browser fixtures |
+| [ControlsUpdate.java](app/src/main/java/app/cinejoy/tv/ControlsUpdate.java) | Download and cache signed web controls for release builds |
+| [tests/](tests/) | Media and signature tests, plus browser fixtures |
 
 When reporting a bug, include the app version, TV model and OS version, the screen or player you were on, the exact remote buttons you pressed, and what you expected to happen. [Report an issue](https://github.com/k10-ketan/cinejoy-tv-app/issues)
 

@@ -10,6 +10,18 @@ node --test tests/*.test.mjs
 
 The tests execute the bundled media-control script with simulated media and frame responses. They cover skipping near both ends, seeking across gaps, sliding live windows, missing or changing media, play errors, and unresponsive embedded players. The tests also check that a non-parent frame cannot send a playback command to an embedded player.
 
+## Signed controls updates
+
+Run the verifier tests with JDK 17. They include modified signatures, malformed lengths, unsupported formats, and oversized downloads.
+
+```sh
+test_dir="$(mktemp -d)"
+javac -d "$test_dir" app/src/main/java/app/cinejoy/tv/ControlsBundle.java tests/ControlsBundleTest.java
+java -cp "$test_dir" app.cinejoy.tv.ControlsBundleTest
+```
+
+For a TV test of the update channel, use a release APK or build with `CINEJOY_ENABLE_CONTROLS_UPDATES=1`. Launch after publishing a higher signed bundle and look for `Saved controls bundle` and `Using controls bundle` under the `CineJoyControls` logcat tag. Start a title and return from the launcher to verify that a controls refresh preserves the playback page. To simulate a channel outage or invalid response, use a test build pointed at a test channel and confirm that the previous signed bundle remains active.
+
 ## Browser regressions
 
 Start a local server from the project root and open both fixtures in Chrome or Chromium.

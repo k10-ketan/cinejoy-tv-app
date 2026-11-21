@@ -27,15 +27,17 @@ fi
 
 The APK is written to `build/CineJoy-TV.apk`. You can install it on a connected test device with `"$ANDROID_SDK_ROOT/platform-tools/adb" install -r build/CineJoy-TV.apk`. An in-place update requires the same signing key as the installed app. Use the release guide when building an APK for distribution. [Release guide](releasing.md)
 
+Development builds use the scripts in your checkout. Rebuild after editing them to test your changes on a TV. The signature tests create a temporary signing key, and building the app uses the debug keystore you created above. [Test guide](testing.md#signed-controls-updates)
+
 The script downloads and verifies AndroidX WebKit 1.9.0. Set `CINEJOY_WEBKIT_AAR` to the path of a local copy to reuse it. [Third-party notice](../app/src/main/assets/licenses/NOTICE.txt)
 
 ## Source layout
 
 | Path | Contents |
 | --- | --- |
-| `app/src/main/java/` | Android activity, WebView setup, and remote key handling |
+| `app/src/main/java/` | Android activity, WebView setup, remote key handling, and signed controls updates |
 | `app/src/main/assets/` | D-pad navigation and playback scripts bundled with the app |
 | `app/src/main/res/` | TV launcher graphics and Android theme |
-| `scripts/` | APK build script |
+| `scripts/` | APK builder and controls bundle signer |
 | `tests/` | Media unit tests and browser fixtures |
 | `docs/` | Build, test, and release instructions |
