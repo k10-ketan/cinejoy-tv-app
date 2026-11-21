@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>Player controls auto-hide regression test</title>
+<style>
+  .player-root { position: relative; height: 90vh; background: #111; }
+  video { width: 100%; height: 100%; }
+  .bottom-0, .server-panel { position: absolute; inset: auto 20px 10px; }
+  .server-panel { bottom: 100px; padding: 20px; background: white; }
+  .bottom-0 { display: flex; flex-wrap: wrap; }
+  .group\/progress { order: -1; width: 100%; height: 36px; }
+  button { width: 80px; height: 36px; }
+</style>
+<script>history.replaceState(null, '', '/watch/movie/test');</script>
+<div class="player-root">
+  <video></video>
+  <div class="inset-0 bg-gradient-to-b pointer-events-none"></div>
+  <div class="bottom-0">
+    <button id="play" aria-label="Pause">Play</button>
+    <button id="servers" aria-label="Servers">Servers</button>
+    <div class="group/progress"><input type="range" aria-label="Seek Video"></div>
+  </div>
+  <div class="top-0"><button id="cast">Cast</button><span id="title">Movie title</span></div>
+</div>
+<output id="result">Tests pending</output>
+<script src="/app/assets/remote.js"></script>
+<script>
+  const video = document.querySelector('video');
+  const player = video.parentElement;
+  const bar = document.querySelector('.bottom-0');
+  const remote = window.cineJoyTvRemote;
+  const focused = () => document.querySelector('[data-cinejoy-tv-focus]');
+  const visible = element => getComputedStyle(element).visibility === 'visible';
+  const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+  let paused = true;
+  const commands = [];
+  window.cineJoyTvMedia = {command: action => commands.push(action)};
+  Object.defineProperty(video, 'paused', {get: () => paused});
+
+  function playback(isPaused) {
+    paused = isPaused;
+    video.dispatchEvent(new Event(isPaused ? 'pause' : 'play'));
+  }
+
+  document.getElementById('servers').onclick = () => {
+    const panel = document.createElement('div');
+    panel.className = 'server-panel';
+    panel.innerHTML = '<button aria-label="Close">Close</button><button>Server 1</button>';
+    panel.firstChild.onclick = () => panel.remove();
+    player.appendChild(panel);
+  };
+
+  function check(condition, message) {
+    if (!condition) throw new Error(message);
+  }
+
+  async function run() {
+    playback(false);
+    await wait(4250);
+    check(!visible(bar) && visible(video), 'Idle playback should hide the bar and keep video visible');
+    remote.move('right', 0);
+    check(visible(bar) && commands.join() === 'forward', 'Right should reveal the bar and skip forward');
+    remote.move('down', 0);
+    remote.move('up', 0);
+    check(focused()?.classList.contains('group/progress'), 'Timeline should receive focus');
+    await wait(4250);
+    check(!visible(bar) && !focused(), 'Timeline focus should clear when playback goes idle');
+    playback(true);
+    remote.move('down', 0);
+    remote.move('up', 0);
+    await wait(4250);
+    check(visible(bar) && focused()?.classList.contains('group/progress'), 'Pause should keep the focused timeline visible');
+    remote.move('up', 0);
+    check(!visible(bar) && !focused() && paused, 'Up from the paused timeline should dismiss the controls immediately');
+    check(!visible(document.getElementById('cast')) && visible(document.getElementById('title')),
+      'Dismissing the controls should hide player buttons and keep the title visible');
+    remote.move('up', 2);
+    check(!visible(bar), 'Holding Up should keep the controls hidden');
+    remote.move('down', 0);
+    check(visible(bar), 'Down should reveal the controls again');
+    remote.move('up', 0);
+    check(focused()?.classList.contains('group/progress'), 'Timeline should remain reachable after dismissing the controls');
+    playback(false);
+    await wait(4250);
+    check(!visible(bar), 'Resuming with the timeline focused should restart auto-hide');
+    remote.move('down', 0);
+    remote.move('up', 0);
+    remote.move('up', 0);
+    check(!visible(bar) && !paused, 'Up from the playing timeline should dismiss the controls immediately');
+    remote.playerOption('Servers');
+    await wait(4250);
+    check(visible(bar) && document.querySelector('.server-panel'), 'An open server menu should stay visible');
+    check(remote.back(), 'Back should close the server menu');
+    await wait(4250);
+    check(!document.querySelector('.server-panel') && !visible(bar), 'The bar should hide after the menu closes');
+    document.getElementById('result').textContent = 'PASS player controls auto-hide';
+  }
+
+  run().catch(error => { document.getElementById('result').textContent = 'FAIL ' + error.message; });
+</script>

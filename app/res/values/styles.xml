@@ -1,0 +1,7 @@
+<resources>
+    <style name="CineJoyTheme" parent="android:style/Theme.Material.NoActionBar">
+        <item name="android:windowBackground">#101510</item>
+        <item name="android:colorAccent">#95FF50</item>
+        <item name="android:windowActionModeOverlay">true</item>
+    </style>
+</resources>

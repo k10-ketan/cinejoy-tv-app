@@ -1,0 +1,7 @@
+This APK includes AndroidX WebKit (androidx.webkit:webkit:1.9.0)
+from The Android Open Source Project.
+
+AndroidX WebKit is licensed under the Apache License, Version 2.0.
+A copy is included in Apache-2.0.txt.
+
+https://developer.android.com/jetpack/androidx/releases/webkit#1.9.0

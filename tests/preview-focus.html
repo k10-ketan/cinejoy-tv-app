@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>Movie preview focus regression test</title>
+<style>
+  body { font: 20px system-ui; margin: 24px; }
+  button, a { display: inline-block; padding: 10px; }
+  .preview { position: fixed; inset: 100px auto auto 120px; width: 440px;
+    height: 200px; padding: 20px; background: white; border: 2px solid black; }
+  .actions { position: absolute; bottom: 20px; left: 20px; }
+</style>
+<button id="saved">Saved movie</button>
+<button id="new">New movie</button>
+<output id="result">Tests pending</output>
+<script src="../app/assets/remote.js"></script>
+<script>
+  const remote = window.cineJoyTvRemote;
+  const result = document.getElementById('result');
+  const saved = document.getElementById('saved');
+  const newMovie = document.getElementById('new');
+  const focused = () => document.querySelector('[data-cinejoy-tv-focus]');
+  let playing = '';
+  let preview;
+
+  function openPreview(action) {
+    preview = document.createElement('div');
+    preview.className = 'preview';
+    preview.setAttribute('role', 'group');
+    preview.innerHTML = '<button aria-label="Close preview">×</button>' +
+      '<div class="actions"><a href="#watch">' + action + '</a><button>More Info</button></div>';
+    preview.firstElementChild.onclick = () => preview.remove();
+    preview.querySelector('a').onclick = event => {
+      event.preventDefault();
+      playing = action;
+      preview.remove();
+    };
+    document.body.append(preview);
+  }
+  saved.onclick = () => openPreview('Resume');
+  newMovie.onclick = () => openPreview('Play');
+
+  function check(condition, message) {
+    if (!condition) throw new Error(message);
+  }
+
+  function select() {
+    const point = remote.select();
+    check(point, 'Select should return a screen position');
+    document.elementFromPoint(point.x * innerWidth, point.y * innerHeight).click();
+  }
+
+  async function run() {
+    remote.move('down');
+    check(focused() === saved, 'Saved card should receive initial focus');
+    select();
+    await Promise.resolve();
+    check(focused()?.textContent === 'Resume', 'Opening a saved card should focus Resume');
+    check(playing === '', 'Opening the preview should leave playback paused');
+    remote.move('right');
+    check(focused()?.textContent === 'More Info', 'Right should move to More Info');
+    preview.append(document.createElement('span'));
+    await Promise.resolve();
+    check(focused()?.textContent === 'More Info', 'Preview updates should preserve focus');
+    check(remote.back() === true, 'Back should dismiss the preview');
+    await Promise.resolve();
+    check(focused() === saved, 'Closing the preview should restore the card focus');
+    select();
+    await Promise.resolve();
+    select();
+    await Promise.resolve();
+    check(playing === 'Resume', 'The next Select should activate Resume');
+    remote.move('right');
+    check(focused() === newMovie, 'Right should select the next card');
+    select();
+    await Promise.resolve();
+    check(focused()?.textContent === 'Play', 'Opening a new card should focus Play');
+    result.textContent = 'PASS movie preview focus';
+  }
+
+  run().catch(error => { result.textContent = 'FAIL ' + error.message; });
+</script>
+</html>
