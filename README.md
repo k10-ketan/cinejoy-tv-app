@@ -4,7 +4,7 @@ CineJoy TV is an unofficial Android TV and Fire TV app for browsing and watching
 
 ## Install
 
-Download `CineJoy-TV.apk` from the release’s **Assets** section. Install it on your TV and open **CineJoy TV** from your apps list. [GitHub Releases](https://github.com/k10-ketan/cinejoy-tv-github/releases)
+Download `CineJoy-TV.apk` from the release’s **Assets** section. Install it on your TV and open **CineJoy TV** from your apps list. [GitHub Releases](https://github.com/k10-ketan/cinejoy-tv-app/releases)
 
 - **Fire TV**. Connect with ADB using Amazon’s instructions, then run the command below. [Connect to Fire TV through ADB](https://developer.amazon.com/docs/fire-tv/connecting-adb-to-device) · [Install and launch an APK](https://developer.amazon.com/docs/fire-tv/installing-and-running-your-app)
 - **Android TV and Google TV**. Open the APK using an installer or file manager on the TV. If the TV prompts you, allow that specific installer to install apps from unknown sources. You can also use the ADB command below once your TV is connected and authorized. [Android Debug Bridge](https://developer.android.com/tools/adb)
@@ -59,7 +59,7 @@ Fixes for remote navigation, playback controls, and device compatibility are wel
 | [media-controls.js](app/src/main/assets/media-controls.js) | Play, pause, and seeking in the page or an embedded player |
 | [tests/](tests/) | Media unit tests and browser fixtures |
 
-When reporting a bug, include the app version, TV model and OS version, the screen or player you were on, the exact remote buttons you pressed, and what you expected to happen. [Report an issue](https://github.com/k10-ketan/cinejoy-tv-github/issues)
+When reporting a bug, include the app version, TV model and OS version, the screen or player you were on, the exact remote buttons you pressed, and what you expected to happen. [Report an issue](https://github.com/k10-ketan/cinejoy-tv-app/issues)
 
 Maintainers can find signing and publishing instructions in the [release guide](docs/releasing.md).
 
