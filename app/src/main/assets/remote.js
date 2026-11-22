@@ -199,7 +199,7 @@
     label.hidden = true;
     if (!shown(focused) || (focused.innerText || "").trim()) return;
     var onTimeline = focused.matches(timeline);
-    var name = onTimeline ? 'Timeline · ◀ / ▶ to seek' :
+    var name = onTimeline ? 'Timeline · ◀ / ▶ seek · Select play/pause' :
       focused.getAttribute('aria-label') || focused.getAttribute('data-tooltip-content') ||
       focused.getAttribute('title');
     if (!name) return;
@@ -387,6 +387,11 @@
     return true;
   }
 
+  function isSkipSegmentButton(element) {
+    return element.matches('button,[role=button]') &&
+      /^skip\s+(recap|intro)\b/i.test((element.getAttribute('aria-label') || element.textContent).trim());
+  }
+
   function move(direction, repeat) {
     var horizontal = direction === 'left' || direction === 'right';
     if (watching()) {
@@ -434,7 +439,12 @@
     var start = from.getBoundingClientRect();
     if (from.matches(timeline)) {
       if (direction === 'up') {
-        hidePlayerControls(from.closest('.player-root'), 'dismissed');
+        var player = from.closest('.player-root');
+        var skip = Array.from(player.querySelectorAll('button,[role=button]')).find(function (button) {
+          return root.contains(button) && isSkipSegmentButton(button) && shown(button) && hitPoint(button);
+        });
+        if (skip) focus(skip);
+        else hidePlayerControls(player, 'dismissed');
         return;
       }
       if (horizontal) {
@@ -447,6 +457,10 @@
       }
     } else if (!horizontal && from.closest('.player-root')) {
       var bar = root.querySelector(timeline);
+      if (direction === 'down' && isSkipSegmentButton(from) && shown(bar)) {
+        focus(bar);
+        return;
+      }
       if (shown(bar) && bar.getBoundingClientRect().bottom <= start.top + 4) {
         if (direction === 'up') {
           focus(bar);
@@ -544,7 +558,7 @@
     var element = current(root);
     if (!element) return null;
     focus(element);
-    if (element.matches(timeline)) return null;
+    if (element.matches(timeline)) return {playback: true};
     if (element.matches('input[type=range]')) {
       adjusting = adjusting === element ? null : element;
       return null;

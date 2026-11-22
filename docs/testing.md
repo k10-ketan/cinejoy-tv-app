@@ -31,7 +31,7 @@ python3 -m http.server 8000 --bind 127.0.0.1
 ```
 
 - **Preview focus** checks that Resume or Play receives focus, that it survives preview updates, and that Back restores focus to the card. [Open fixture](http://127.0.0.1:8000/tests/preview-focus.html)
-- **Playback controls** checks auto-hide, direct skipping, timeline focus during pause and resume, closing a player menu, and navigating the episode picker. [Open fixture](http://127.0.0.1:8000/tests/player-autohide.html)
+- **Playback controls** checks auto-hide, direct skipping, Select to pause and resume from the timeline, Skip Recap and Skip Intro focus, closing a player menu, and navigating the episode picker. [Open fixture](http://127.0.0.1:8000/tests/player-autohide.html)
 
 ## Test on a TV
 
@@ -48,8 +48,9 @@ Use a TV remote from launch through playback. Run the checks with a fresh instal
 | Start playback in the built-in player and leave the remote idle for four seconds | The playback bar hides. Down brings it back |
 | Pause with the media key, then tap Left and Right with playback controls unfocused | Each press skips 10 seconds when the stream supports it. The player stays paused |
 | Focus a playback control, press Up, and hold Left or Right | The timeline is highlighted. Holding seeks in larger steps and stays within the playable range |
-| Press Up with the timeline focused while playing or paused | The player buttons and timeline hide immediately. Holding Up keeps them hidden, and Down brings them back |
-| Leave the timeline focused while paused, then press Play and wait four seconds | The timeline remains visible while paused. During playback, the bar hides and releases focus |
+| Press Up with the timeline focused while playing or paused and no skip button visible | The player buttons and timeline hide immediately. Holding Up keeps them hidden, and Down brings them back |
+| Press Select on the focused timeline while playing, then press it again | Playback pauses and resumes while the timeline remains focused. After four seconds of playback without input, the bar hides |
+| Focus the timeline while Skip Recap or Skip Intro is visible, then press Up | The skip button receives focus. Select activates it. Down instead returns to the timeline |
 | Open Servers, Subtitles, or Settings after the controls fade out | Focus enters the panel. Back closes it, and Left or Right inside it leaves the playback position alone |
 | Open Episodes, press Down to enter the row, use Left or Right, and press Select | The row scrolls to keep the focused card visible, and playback switches to that episode |
 | Open the season selector and press Back twice | The first press returns to the episode row. The second closes the picker and focuses the Episodes button |

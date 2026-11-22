@@ -13,6 +13,7 @@
   .bottom-0 { display: flex; flex-wrap: wrap; }
   .group\/progress { order: -1; width: 100%; height: 36px; }
   button { width: 80px; height: 36px; }
+  #skip { position: absolute; right: 20px; bottom: 90px; width: 110px; }
 </style>
 <script>history.replaceState(null, '', '/watch/movie/test');</script>
 <div class="player-root">
@@ -24,6 +25,7 @@
     <button id="episodes" aria-label="Episodes">Episodes</button>
     <div class="group/progress"><input type="range" aria-label="Seek Video"></div>
   </div>
+  <button id="skip" hidden>Skip Recap <span aria-hidden="true">⏭</span></button>
   <div class="top-0"><button id="cast">Cast</button><span id="title">Movie title</span></div>
 </div>
 <output id="result">Tests pending</output>
@@ -52,6 +54,13 @@
     panel.innerHTML = '<button aria-label="Close">Close</button><button>Server 1</button>';
     panel.firstChild.onclick = () => panel.remove();
     player.appendChild(panel);
+  };
+
+  const skip = document.getElementById('skip');
+  let skipped = 0;
+  skip.onclick = () => {
+    skipped++;
+    skip.hidden = true;
   };
 
   let selectedEpisode;
@@ -89,7 +98,7 @@
 
   function pressSelect() {
     const point = remote.select();
-    check(point && !point.playback, 'Select should target the focused picker control');
+    check(point && !point.playback, 'Select should target the focused button');
     document.elementFromPoint(point.x * innerWidth, point.y * innerHeight).click();
   }
 
@@ -127,6 +136,29 @@
     check(visible(bar), 'Down should reveal the controls again');
     remote.move('up', 0);
     check(focused()?.classList.contains('group/progress'), 'Timeline should remain reachable after dismissing the controls');
+    const timeline = focused();
+    skip.hidden = false;
+    remote.move('up', 0);
+    check(focused() === skip && visible(bar), 'Up from the timeline should focus the visible Skip Recap button');
+    remote.move('down', 0);
+    check(focused() === timeline, 'Down from Skip Recap should return to the timeline');
+    check(remote.select()?.playback && focused() === timeline, 'Select should request resume and keep timeline focus');
+    playback(false);
+    check(remote.select()?.playback && focused() === timeline, 'Select should request pause and keep timeline focus');
+    playback(true);
+    remote.move('up', 0);
+    pressSelect();
+    check(skipped === 1 && skip.hidden && paused, 'Select on Skip Recap should click it without toggling playback');
+    skip.textContent = 'Skip Intro';
+    skip.hidden = false;
+    remote.clear();
+    remote.move('down', 0);
+    remote.move('up', 0);
+    check(focused() === timeline, 'Timeline should be reachable after the skip button is activated');
+    remote.move('up', 0);
+    check(focused() === skip, 'Up should also focus Skip Intro when it is visible');
+    remote.move('down', 0);
+    skip.hidden = true;
     playback(false);
     await wait(4250);
     check(!visible(bar), 'Resuming with the timeline focused should restart auto-hide');

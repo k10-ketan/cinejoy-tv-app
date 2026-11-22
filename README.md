@@ -25,13 +25,15 @@ If you have a development build of `app.cinejoy.tv` signed with another key, And
 | Left or Right during playback, with focus off the controls | Skip back or forward 10 seconds |
 | Down during playback | Focus the playback controls |
 | Up from the lower playback controls | Focus the timeline |
-| Up from the timeline | Hide the playback controls immediately |
+| Up from the timeline | Focus Skip Recap or Skip Intro when visible. Otherwise, hide the playback controls |
+| Select on the timeline | Pause or resume playback |
+| Down from Skip Recap or Skip Intro | Return to the timeline |
 | Left or Right on the timeline | Seek by 10 seconds. Hold to step by 30, then 60 seconds |
 | Dedicated media buttons | Toggle playback or skip where the player supports the action |
 | Back | Dismiss the current panel or return to the previous screen |
 | Menu, where available | Open TV playback or site shortcuts |
 
-The playback bar hides after four seconds of inactivity during playback in CineJoy’s built-in player. Press Down to bring it back. While paused, the bar stays visible until you dismiss it with Up from the timeline. Open player menus stay visible.
+The playback bar hides after four seconds of inactivity during playback in CineJoy’s built-in player. Press Down to bring it back. While paused, the bar stays visible. When no skip button is visible, press Up from the timeline to dismiss it. Open player menus stay visible.
 
 The title at the top of the player is display text. Playback and available controls depend on the selected stream and the TV’s WebView. Live or embedded streams may restrict seeking. If a player fails to load, try another entry in **Servers** when one is available.
 
