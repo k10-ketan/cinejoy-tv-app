@@ -24,7 +24,7 @@ For a TV test of the update channel, use a release APK or build with `CINEJOY_EN
 
 ## Browser regressions
 
-Start a local server from the project root and open both fixtures in Chrome or Chromium.
+Start a local server from the project root and open these fixtures in Chrome or Chromium.
 
 ```sh
 python3 -m http.server 8000 --bind 127.0.0.1
@@ -32,6 +32,7 @@ python3 -m http.server 8000 --bind 127.0.0.1
 
 - **Preview focus** checks that Resume or Play receives focus, that it survives preview updates, and that Back restores focus to the card. [Open fixture](http://127.0.0.1:8000/tests/preview-focus.html)
 - **Playback controls** checks auto-hide, direct skipping, Select to pause and resume from the timeline, Skip Recap and Skip Intro focus, closing a player menu, and navigating the episode picker. [Open fixture](http://127.0.0.1:8000/tests/player-autohide.html)
+- **Series details** checks D-pad entry from the episode toolbar and bottom navigation, scrolling across episode cards, Select, and empty episode rows. [Open fixture](http://127.0.0.1:8000/tests/series-episodes.html)
 
 ## Test on a TV
 
@@ -53,6 +54,7 @@ Use a TV remote from launch through playback. Run the checks with a fresh instal
 | Focus the timeline while Skip Recap or Skip Intro is visible, then press Up | The skip button receives focus. Select activates it. Down instead returns to the timeline |
 | Open Servers, Subtitles, or Settings after the controls fade out | Focus enters the panel. Back closes it, and Left or Right inside it leaves the playback position alone |
 | Open Episodes, press Down to enter the row, use Left or Right, and press Select | The row scrolls to keep the focused card visible, and playback switches to that episode |
+| On a series details page, press Down from the season toolbar or Up from the bottom navigation while the episode row is visible | Focus enters the episode row. Left and Right move between cards, and Select opens the highlighted episode |
 | Open the season selector and press Back twice | The first press returns to the episode row. The second closes the picker and focuses the Episodes button |
 | Play a title with an unavailable source or temporarily disconnect the network | The app stays responsive. Try another server or reconnect and reload |
 | Press Home during playback, then return to the app | Playback stays in the background only if the device and app session allow it. The player remains controllable on return |

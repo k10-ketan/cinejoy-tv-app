@@ -1,5 +1,5 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="app.cinejoy.tv" android:versionCode="16" android:versionName="1.15">
+    package="app.cinejoy.tv" android:versionCode="17" android:versionName="1.16">
     <uses-sdk android:minSdkVersion="22" android:targetSdkVersion="34" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-feature android:name="android.software.leanback" android:required="false" />

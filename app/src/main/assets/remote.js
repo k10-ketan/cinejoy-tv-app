@@ -24,6 +24,8 @@
   var timeline = '.player-root [class~="group/progress"]:has(> input[type=range][aria-label="Seek Video"])';
   var episodePanel = '.episode-popover';
   var episodeCard = '[role=button][aria-label^="Play "]';
+  var seriesEpisodes = '[class~="group/episodes"]';
+  var seriesEpisode = seriesEpisodes + ' a[href^="/watch/tv/"]';
   var seasonButton = 'button[aria-label="Change season"]';
   var focusable = [
     'a[href]', 'button', 'input:not([type=hidden])', 'select', 'textarea',
@@ -392,6 +394,44 @@
       /^skip\s+(recap|intro)\b/i.test((element.getAttribute('aria-label') || element.textContent).trim());
   }
 
+  function moveSeriesEpisodeFocus(from, direction) {
+    if (!location.pathname.startsWith('/series/')) return false;
+    var carousel = document.querySelector(seriesEpisodes);
+    if (!carousel) return false;
+    var onCard = from.matches(seriesEpisode);
+    var alongRow = onCard && (direction === 'left' || direction === 'right');
+    var toolbar = carousel.previousElementSibling;
+    var fromToolbar = direction === 'down' && toolbar && toolbar.contains(from) &&
+      !from.closest('[role=listbox],[role=option]');
+    var fromBottomNav = direction === 'up' && from.closest('.mobile-nav-bar');
+    var toToolbar = onCard && direction === 'up' && toolbar;
+    var toBottomNav = onCard && direction === 'down';
+    if (!alongRow && !fromToolbar && !fromBottomNav && !toToolbar && !toBottomNav) return false;
+
+    var targets = toToolbar ? toolbar.querySelectorAll('button,input') :
+      toBottomNav ? document.querySelectorAll('.mobile-nav-bar a,.mobile-nav-bar button') :
+      carousel.querySelectorAll(seriesEpisode);
+    var items = Array.from(targets).filter(function (element) { return usableControl(element); });
+    var next;
+    if (alongRow) {
+      next = items[items.indexOf(from) + (direction === 'left' ? -1 : 1)];
+    } else {
+      var start = from.getBoundingClientRect();
+      var center = (start.left + start.right) / 2;
+      var best = Infinity;
+      items.forEach(function (element) {
+        var rect = element.getBoundingClientRect();
+        if (fromBottomNav && rect.top >= start.top) return;
+        var distance = Math.abs((rect.left + rect.right) / 2 - center);
+        if (distance >= best || !hitPoint(element)) return;
+        next = element;
+        best = distance;
+      });
+    }
+    if (next) focus(next);
+    return !!next || alongRow;
+  }
+
   function move(direction, repeat) {
     var horizontal = direction === 'left' || direction === 'right';
     if (watching()) {
@@ -436,6 +476,7 @@
       return;
     }
     if (root !== document && moveEpisodeFocus(root, from, direction)) return;
+    if (root === document && moveSeriesEpisodeFocus(from, direction)) return;
     var start = from.getBoundingClientRect();
     if (from.matches(timeline)) {
       if (direction === 'up') {
@@ -532,7 +573,7 @@
     }
   }
 
-  function hitPoint(element) {
+  function hitPoint(element, avoidNestedControls) {
     var rect = element.getBoundingClientRect();
     var left = Math.max(0, rect.left);
     var right = Math.min(innerWidth, rect.right);
@@ -544,7 +585,9 @@
       var x = left + (right - left) * samples[i][0];
       var y = top + (bottom - top) * samples[i][1];
       var hit = document.elementFromPoint(x, y);
-      if (hit && element.contains(hit)) return {x: x / innerWidth, y: y / innerHeight};
+      if (!hit || !element.contains(hit)) continue;
+      if (avoidNestedControls === true && hit.closest('a,button,[role=button]') !== element) continue;
+      return {x: x / innerWidth, y: y / innerHeight};
     }
     return null;
   }
@@ -563,7 +606,8 @@
       adjusting = adjusting === element ? null : element;
       return null;
     }
-    var point = hitPoint(element);
+    // Episode cards contain a separate Mark watched control.
+    var point = hitPoint(element, element.matches(seriesEpisode));
     if (element.matches('iframe') && point) {
       point.pointer = true;
       return point;

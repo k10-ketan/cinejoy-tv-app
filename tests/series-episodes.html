@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>Series episode focus regression test</title>
+<style>
+  body { margin: 24px; font: 18px system-ui; }
+  .toolbar { display: flex; justify-content: space-between; margin: 12vh 0 30px; }
+  .scroller { display: flex; gap: 24px; overflow-x: auto; }
+  .scroller a { display: block; flex: 0 0 36%; min-height: 160px; background: #ddd; }
+  .scroller a [role=button] { display: block; height: 80px; text-align: center; }
+  .mobile-nav-bar { position: fixed; bottom: 16px; left: 50%; display: flex; gap: 24px; }
+</style>
+<output id="result">Tests pending</output>
+<section>
+  <div class="toolbar">
+    <button id="season" aria-haspopup="listbox">Season 3</button>
+    <label><input id="search" placeholder="Search episodes"></label>
+    <button>Oldest</button>
+  </div>
+  <div class="group/episodes">
+    <div class="scroller"></div>
+  </div>
+</section>
+<div class="mobile-nav-bar"><a id="lists" href="/lists">My List</a></div>
+<script src="../app/src/main/assets/remote.js"></script>
+<script>
+  const remote = window.cineJoyTvRemote;
+  const result = document.getElementById('result');
+  const search = document.getElementById('search');
+  const season = document.getElementById('season');
+  const lists = document.getElementById('lists');
+  const scroller = document.querySelector('.scroller');
+  const focused = () => document.querySelector('[data-cinejoy-tv-focus]');
+  let selectedEpisode = '';
+  let watchedChanges = 0;
+  const episodes = Array.from({length: 6}, (_, index) => {
+    const link = document.createElement('a');
+    link.href = '/watch/tv/124364/3/' + (index + 1);
+    link.textContent = 'Episode ' + (index + 1);
+    const markWatched = document.createElement('div');
+    markWatched.setAttribute('role', 'button');
+    markWatched.setAttribute('aria-label', 'Mark episode as watched');
+    markWatched.tabIndex = 0;
+    markWatched.textContent = 'Mark watched';
+    markWatched.onclick = event => {
+      event.preventDefault();
+      event.stopPropagation();
+      watchedChanges++;
+    };
+    link.append(markWatched);
+    link.onclick = event => {
+      event.preventDefault();
+      selectedEpisode = link.pathname;
+    };
+    scroller.append(link);
+    return link;
+  });
+
+  function check(condition, message) {
+    if (!condition) throw new Error(message);
+  }
+
+  function startFrom(element, direction) {
+    remote.clear();
+    element.focus({preventScroll: true});
+    remote.move(direction, 0);
+    check(focused() === element, 'The starting control should get remote focus');
+  }
+
+  try {
+    history.replaceState(null, '', '/series/124364-from-2022?season=3');
+    startFrom(search, 'down');
+    remote.move('down', 0);
+    check(focused() === episodes[1], 'Down from Search episodes should land on the nearest card');
+    remote.move('up', 0);
+    check(focused() === search, 'Up from the card should return to the episode toolbar');
+    startFrom(season, 'down');
+    remote.move('down', 0);
+    check(focused() === episodes[0], 'Down from Season should enter the episode row');
+    remote.move('left', 0);
+    check(focused() === episodes[0], 'Left at the start should keep focus on the first card');
+
+    startFrom(lists, 'up');
+    remote.move('up', 0);
+    check(focused() === episodes[1], 'Up from bottom navigation should enter the episode row');
+    while (focused() !== episodes[5]) {
+      const current = episodes.indexOf(focused());
+      remote.move('right', 0);
+      check(focused() === episodes[current + 1], 'Right should advance one card');
+    }
+    check(scroller.scrollLeft > 0, 'Moving right should scroll clipped cards into view');
+    remote.move('right', 0);
+    check(focused() === episodes[5], 'Right at the end should keep focus on the final card');
+    remote.move('left', 0);
+    check(focused() === episodes[4], 'Left should return to the previous card');
+    const point = remote.select();
+    check(point, 'Select should provide coordinates on the episode link');
+    document.elementFromPoint(point.x * innerWidth, point.y * innerHeight).click();
+    check(selectedEpisode === episodes[4].pathname, 'Select should open the focused episode');
+    check(watchedChanges === 0, 'Select on the card should leave its watched status alone');
+    episodes.forEach(episode => episode.remove());
+    startFrom(lists, 'up');
+    remote.move('up', 0);
+    check(focused() === search, 'An empty episode row should leave regular navigation available');
+    result.textContent = 'PASS series episode focus';
+  } catch (error) {
+    result.textContent = 'FAIL ' + error.message;
+  }
+</script>
+</html>
